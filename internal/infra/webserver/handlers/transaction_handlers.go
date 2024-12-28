@@ -8,6 +8,7 @@ import (
 	"go-currency-exchange/internal/dto"
 	"go-currency-exchange/internal/entity"
 	"go-currency-exchange/internal/infra/database"
+	"go-currency-exchange/pkg/rabbitmq"
 )
 
 type TransactionHandler struct {
@@ -36,9 +37,23 @@ func (h *TransactionHandler) CreateTransaction(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	err = h.TransactionDB.Create(transaction.Description, transaction.Value)
+	ch, err := rabbitmq.OpenChannel()
+	if err != nil {
+		panic(err)
+	}
+	defer ch.Close()
+
+	transactionJSON, err := json.Marshal(transaction)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
+		return
+	}
+
+	err = rabbitmq.Publish(ch, "transactions", string(transactionJSON))
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
 		return
 	}
 

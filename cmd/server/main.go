@@ -1,13 +1,16 @@
 package main
 
 import (
+	"encoding/json"
 	"net/http"
 
 	"go-currency-exchange/configs"
 	"go-currency-exchange/internal/entity"
 	"go-currency-exchange/internal/infra/database"
 	"go-currency-exchange/internal/infra/webserver/handlers"
+	"go-currency-exchange/pkg/rabbitmq"
 
+	amqp "github.com/rabbitmq/amqp091-go"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
@@ -30,7 +33,12 @@ func main() {
 	}
 	println("Database migrated")
 
-	println("Running at port: " + config.WebServerPort)
+	ch, err := rabbitmq.OpenChannel()
+	if err != nil {
+		panic(err)
+	}
+	defer ch.Close()
+
 	transactionDB := database.NewTransaction(db)
 	transactionHandler := handlers.NewTransactionHandler(transactionDB)
 
@@ -38,8 +46,28 @@ func main() {
 	http.HandleFunc("POST /transactions", transactionHandler.CreateTransaction)
 	http.HandleFunc("GET /transactions/{id}", transactionHandler.GetTransactionById)
 
-	err = http.ListenAndServe(":"+config.WebServerPort, nil)
-	if err != nil {
-		panic(err)
+	go http.ListenAndServe(":"+config.WebServerPort, nil)
+	println("Running at port: " + config.WebServerPort)
+
+	rabbitmqMessagesChannel := make(chan amqp.Delivery)
+	go rabbitmq.Consume(ch, rabbitmqMessagesChannel)
+	rabbitmqWorker(rabbitmqMessagesChannel, transactionDB)
+}
+
+func rabbitmqWorker(messageChan chan amqp.Delivery, transactionDB *database.Transaction) {
+	for message := range messageChan {
+		println(string(message.Body))
+
+		var transaction entity.Transaction
+		err := json.Unmarshal(message.Body, &transaction)
+		if err != nil {
+			panic(err)
+		}
+
+		err = transactionDB.Create(transaction.Description, transaction.Value)
+		if err != nil {
+			panic(err)
+		}
+		message.Ack(false)
 	}
 }
