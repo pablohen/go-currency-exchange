@@ -2,13 +2,16 @@ package handlers
 
 import (
 	"encoding/json"
+	"math"
 	"net/http"
 	"strconv"
+	"time"
 
 	"go-currency-exchange/internal/dto"
 	"go-currency-exchange/internal/entity"
 	"go-currency-exchange/internal/infra/database"
 	"go-currency-exchange/pkg/rabbitmq"
+	"go-currency-exchange/pkg/treasury"
 )
 
 type TransactionHandler struct {
@@ -73,7 +76,28 @@ func (h *TransactionHandler) GetTransactionById(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	json.NewEncoder(w).Encode(transaction)
+	rate, err := treasury.GetRatesByDate(transaction.CreatedAt)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	floatExchangeRate, err := strconv.ParseFloat(rate.ExchangeRate, 64)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	transactionOutput := dto.TransactionOutput{
+		ID:             transaction.ID,
+		Description:    transaction.Description,
+		CreatedAt:      transaction.CreatedAt.UTC().Format(time.RFC3339),
+		OriginalValue:  transaction.Value,
+		ConversionRate: math.Round(floatExchangeRate*100) / 100,
+		ConvertedValue: math.Round(transaction.Value*floatExchangeRate*100) / 100,
+	}
+
+	json.NewEncoder(w).Encode(transactionOutput)
 }
 
 func (h *TransactionHandler) GetAllTransactions(w http.ResponseWriter, r *http.Request) {
