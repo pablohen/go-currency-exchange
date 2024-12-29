@@ -10,6 +10,8 @@ import (
 	"go-currency-exchange/internal/infra/webserver/handlers"
 	"go-currency-exchange/pkg/rabbitmq"
 
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -42,11 +44,17 @@ func main() {
 	transactionDB := database.NewTransaction(db)
 	transactionHandler := handlers.NewTransactionHandler(transactionDB)
 
-	http.HandleFunc("GET /transactions", transactionHandler.GetAllTransactionsPaginated)
-	http.HandleFunc("POST /transactions", transactionHandler.CreateTransaction)
-	http.HandleFunc("GET /transactions/{id}", transactionHandler.GetTransactionById)
+	r := chi.NewRouter()
+	r.Use(middleware.Logger)
+	r.Use(middleware.Recoverer)
 
-	go http.ListenAndServe(":"+config.WebServerPort, nil)
+	transactionRouter := chi.NewRouter()
+	transactionRouter.Get("/", transactionHandler.GetAllTransactionsPaginated)
+	transactionRouter.Post("/", transactionHandler.CreateTransaction)
+	transactionRouter.Get("/{id}", transactionHandler.GetTransactionById)
+
+	r.Mount("/transactions", transactionRouter)
+	go http.ListenAndServe(":"+config.WebServerPort, r)
 	println("Running at port: " + config.WebServerPort)
 
 	rabbitmqMessagesChannel := make(chan amqp.Delivery)
