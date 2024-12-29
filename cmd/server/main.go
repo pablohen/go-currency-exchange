@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 
 	"go-currency-exchange/configs"
@@ -18,6 +19,9 @@ import (
 )
 
 func main() {
+	log.SetFlags(log.LstdFlags | log.LUTC)
+	middleware.DefaultLogger = middleware.RequestLogger(&middleware.DefaultLogFormatter{Logger: log.New(log.Writer(), "", log.LstdFlags|log.LUTC)})
+
 	config, err := configs.LoadConfig(".")
 	if err != nil {
 		panic(err)
@@ -33,47 +37,48 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	println("Database migrated")
+	log.Printf("Database migrated")
 
-	ch, err := rabbitmq.OpenChannel()
+	rabbitmqChannel, err := rabbitmq.OpenChannel()
 	if err != nil {
 		panic(err)
 	}
-	defer ch.Close()
+	defer rabbitmqChannel.Close()
 
-	transactionDB := database.NewTransaction(db)
-	transactionHandler := handlers.NewTransactionHandler(transactionDB)
-
-	r := chi.NewRouter()
-	r.Use(middleware.Logger)
-	r.Use(middleware.Recoverer)
+	transactionRepository := database.NewTransactionRepository(db)
+	transactionHandler := handlers.NewTransactionHandler(transactionRepository, rabbitmqChannel)
 
 	transactionRouter := chi.NewRouter()
 	transactionRouter.Get("/", transactionHandler.GetAllTransactionsPaginated)
 	transactionRouter.Post("/", transactionHandler.CreateTransaction)
 	transactionRouter.Get("/{id}", transactionHandler.GetTransactionById)
-
+	r := chi.NewRouter()
+	r.Use(middleware.Logger)
+	r.Use(middleware.Recoverer)
 	r.Mount("/transactions", transactionRouter)
 	go http.ListenAndServe(":"+config.WebServerPort, r)
-	println("Running at port: " + config.WebServerPort)
+	log.Printf("Running at port: %s", config.WebServerPort)
 
-	rabbitmqMessagesChannel := make(chan amqp.Delivery)
-	go rabbitmq.Consume(ch, rabbitmqMessagesChannel)
-	rabbitmqWorker(rabbitmqMessagesChannel, transactionDB)
+	transactionMessagesChannel := make(chan amqp.Delivery)
+	go rabbitmq.Consume(rabbitmqChannel, "transactions", "", transactionMessagesChannel)
+
+	createTransactionWorker(transactionMessagesChannel, transactionRepository)
 }
 
-func rabbitmqWorker(messageChan chan amqp.Delivery, transactionDB *database.Transaction) {
+func createTransactionWorker(messageChan chan amqp.Delivery, transactionRepository *database.TransactionRepository) {
 	for message := range messageChan {
-		println(string(message.Body))
+		log.Printf("Received message: %s", message.Body)
 
 		var transaction entity.Transaction
 		err := json.Unmarshal(message.Body, &transaction)
 		if err != nil {
+			// TODO: log and push to error queue
 			panic(err)
 		}
 
-		err = transactionDB.Create(transaction.Description, transaction.Value)
+		err = transactionRepository.Create(transaction.Description, transaction.Value)
 		if err != nil {
+			// TODO: log and push to error queue
 			panic(err)
 		}
 		message.Ack(false)

@@ -6,17 +6,17 @@ import (
 	"gorm.io/gorm"
 )
 
-type Transaction struct {
+type TransactionRepository struct {
 	DB *gorm.DB
 }
 
-func NewTransaction(db *gorm.DB) *Transaction {
-	return &Transaction{
+func NewTransactionRepository(db *gorm.DB) *TransactionRepository {
+	return &TransactionRepository{
 		DB: db,
 	}
 }
 
-func (t *Transaction) Create(description string, value float64) error {
+func (t *TransactionRepository) Create(description string, value float64) error {
 	transaction, err := entity.NewTransaction(description, value)
 	if err != nil {
 		return err
@@ -30,7 +30,7 @@ func (t *Transaction) Create(description string, value float64) error {
 	return nil
 }
 
-func (t *Transaction) GetById(id string) (*entity.Transaction, error) {
+func (t *TransactionRepository) GetById(id string) (*entity.Transaction, error) {
 	var transaction entity.Transaction
 	err := t.DB.First(&transaction, "id = ?", id).Error
 	if err != nil {
@@ -40,7 +40,7 @@ func (t *Transaction) GetById(id string) (*entity.Transaction, error) {
 	return &transaction, nil
 }
 
-func (t *Transaction) GetAll() ([]entity.Transaction, error) {
+func (t *TransactionRepository) GetAll() ([]entity.Transaction, error) {
 	var transactions []entity.Transaction
 	err := t.DB.Find(&transactions).Error
 	if err != nil {
@@ -50,7 +50,7 @@ func (t *Transaction) GetAll() ([]entity.Transaction, error) {
 	return transactions, nil
 }
 
-func (t *Transaction) GetAllPaginated(page int, pageSize int) (ItemsPaginated, error) {
+func (t *TransactionRepository) GetAllPaginated(page int, pageSize int) (ItemsPaginated, error) {
 	var transactions []entity.Transaction
 	err := t.DB.Offset((page - 1) * pageSize).Limit(pageSize).Find(&transactions).Error
 	if err != nil {

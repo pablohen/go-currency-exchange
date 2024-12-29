@@ -19,13 +19,11 @@ func OpenChannel() (*amqp.Channel, error) {
 		User:   url.UserPassword(config.RabbitMQUser, config.RabbitMQPassword),
 		Host:   config.RabbitMQHost + ":" + config.RabbitMQPort,
 	}
-	println(url.String())
 
 	conn, err := amqp.Dial(url.String())
 	if err != nil {
 		return nil, err
 	}
-	println("Connected to RabbitMQ")
 
 	ch, err := conn.Channel()
 	if err != nil {
@@ -35,10 +33,7 @@ func OpenChannel() (*amqp.Channel, error) {
 	return ch, nil
 }
 
-func Consume(ch *amqp.Channel, out chan amqp.Delivery) error {
-	queue := "transactions"
-	consumer := "go-currency-exchange-consumer"
-
+func Consume(ch *amqp.Channel, queue string, consumer string, out chan amqp.Delivery) error {
 	_, err := ch.QueueDeclare(queue,
 		true,
 		false,

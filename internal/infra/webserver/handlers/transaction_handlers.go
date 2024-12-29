@@ -12,15 +12,19 @@ import (
 	"go-currency-exchange/internal/infra/database"
 	"go-currency-exchange/pkg/rabbitmq"
 	"go-currency-exchange/pkg/treasury"
+
+	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 type TransactionHandler struct {
-	TransactionDB database.TransactionInterface
+	TransactionRepository database.TransactionInterface
+	Channel               *amqp.Channel
 }
 
-func NewTransactionHandler(db database.TransactionInterface) *TransactionHandler {
+func NewTransactionHandler(db database.TransactionInterface, channel *amqp.Channel) *TransactionHandler {
 	return &TransactionHandler{
-		TransactionDB: db,
+		TransactionRepository: db,
+		Channel:               channel,
 	}
 }
 
@@ -40,12 +44,6 @@ func (h *TransactionHandler) CreateTransaction(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	ch, err := rabbitmq.OpenChannel()
-	if err != nil {
-		panic(err)
-	}
-	defer ch.Close()
-
 	transactionJSON, err := json.Marshal(transaction)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -53,7 +51,7 @@ func (h *TransactionHandler) CreateTransaction(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	err = rabbitmq.Publish(ch, "transactions", string(transactionJSON))
+	err = rabbitmq.Publish(h.Channel, "transactions", string(transactionJSON))
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(err.Error()))
@@ -70,7 +68,7 @@ func (h *TransactionHandler) GetTransactionById(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	transaction, err := h.TransactionDB.GetById(transactionID)
+	transaction, err := h.TransactionRepository.GetById(transactionID)
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
 		return
@@ -101,7 +99,7 @@ func (h *TransactionHandler) GetTransactionById(w http.ResponseWriter, r *http.R
 }
 
 func (h *TransactionHandler) GetAllTransactions(w http.ResponseWriter, r *http.Request) {
-	transactions, err := h.TransactionDB.GetAll()
+	transactions, err := h.TransactionRepository.GetAll()
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -133,7 +131,7 @@ func (h *TransactionHandler) GetAllTransactionsPaginated(w http.ResponseWriter, 
 		return
 	}
 
-	items, err := h.TransactionDB.GetAllPaginated(pageInt, pageSizeInt)
+	items, err := h.TransactionRepository.GetAllPaginated(pageInt, pageSizeInt)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
