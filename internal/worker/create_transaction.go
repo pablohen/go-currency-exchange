@@ -10,7 +10,7 @@ import (
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
-func CreateTransaction(messageChan chan amqp.Delivery, transactionRepository *database.TransactionRepository) {
+func CreateTransaction(messageChan chan amqp.Delivery, transactionRepository database.TransactionInterface) {
 	for message := range messageChan {
 		log.Printf("Received message: %s", message.Body)
 
