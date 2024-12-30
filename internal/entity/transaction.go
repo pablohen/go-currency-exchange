@@ -3,6 +3,7 @@ package entity
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -22,7 +23,7 @@ var (
 	ErrInvalidValue                = errors.New("value must be greater than 0")
 )
 
-func NewTransaction(description string, value float64) (*Transaction, error) {
+func NewTransaction(description string, value float64, createdAt string) (*Transaction, error) {
 	if description == "" {
 		return nil, ErrEmptyDescription
 	}
@@ -35,9 +36,24 @@ func NewTransaction(description string, value float64) (*Transaction, error) {
 		return nil, ErrInvalidValue
 	}
 
+	parsedCreatedAt := time.Now().UTC()
+
+	if createdAt != "" {
+		parse, err := time.Parse(time.RFC3339Nano, createdAt)
+		if err != nil {
+			return nil, err
+		}
+
+		parsedCreatedAt = parse
+	}
+
 	return &Transaction{
 		ID:          uuid.New().String(),
 		Description: description,
 		Value:       value,
+		Model: gorm.Model{
+			CreatedAt: parsedCreatedAt,
+			UpdatedAt: parsedCreatedAt,
+		},
 	}, nil
 }

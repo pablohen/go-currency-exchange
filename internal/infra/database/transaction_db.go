@@ -16,8 +16,8 @@ func NewTransactionRepository(db *gorm.DB) *TransactionRepository {
 	}
 }
 
-func (t *TransactionRepository) Create(description string, value float64) error {
-	transaction, err := entity.NewTransaction(description, value)
+func (t *TransactionRepository) Create(description string, value float64, createdAt string) error {
+	transaction, err := entity.NewTransaction(description, value, createdAt)
 	if err != nil {
 		return err
 	}

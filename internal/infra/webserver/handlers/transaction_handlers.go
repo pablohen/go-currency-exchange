@@ -37,21 +37,27 @@ func (h *TransactionHandler) CreateTransaction(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	transaction, err := entity.NewTransaction(createTransactionInput.Description, createTransactionInput.Value)
+	transaction, err := entity.NewTransaction(createTransactionInput.Description, createTransactionInput.Value, createTransactionInput.CreatedAt)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte(err.Error()))
 		return
 	}
 
-	transactionJSON, err := json.Marshal(transaction)
+	transactionMessage := dto.TransactionMessage{
+		ID:          transaction.ID,
+		Description: transaction.Description,
+		Value:       transaction.Value,
+		CreatedAt:   transaction.CreatedAt.UTC().Format(time.RFC3339Nano),
+	}
+	transactionMessageJSON, err := json.Marshal(transactionMessage)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(err.Error()))
 		return
 	}
 
-	err = rabbitmq.Publish(h.Channel, "transactions", string(transactionJSON))
+	err = rabbitmq.Publish(h.Channel, "transactions", string(transactionMessageJSON))
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(err.Error()))
@@ -61,7 +67,7 @@ func (h *TransactionHandler) CreateTransaction(w http.ResponseWriter, r *http.Re
 	w.WriteHeader(http.StatusCreated)
 }
 
-func (h *TransactionHandler) GetTransactionById(w http.ResponseWriter, r *http.Request) {
+func (h *TransactionHandler) GetTransactionByIdWithExchangeRate(w http.ResponseWriter, r *http.Request) {
 	transactionID := r.PathValue("id")
 	if transactionID == "" {
 		w.WriteHeader(http.StatusBadRequest)
@@ -71,25 +77,28 @@ func (h *TransactionHandler) GetTransactionById(w http.ResponseWriter, r *http.R
 	transaction, err := h.TransactionRepository.GetById(transactionID)
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
+		w.Write([]byte(err.Error()))
 		return
 	}
 
 	rate, err := treasury.GetRatesByDate(transaction.CreatedAt)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
 		return
 	}
 
 	floatExchangeRate, err := strconv.ParseFloat(rate.ExchangeRate, 64)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
 		return
 	}
 
 	transactionOutput := dto.TransactionOutput{
 		ID:             transaction.ID,
 		Description:    transaction.Description,
-		CreatedAt:      transaction.CreatedAt.UTC().Format(time.RFC3339),
+		CreatedAt:      transaction.CreatedAt.UTC().Format(time.RFC3339Nano),
 		OriginalValue:  transaction.Value,
 		ConversionRate: math.Round(floatExchangeRate*100) / 100,
 		ConvertedValue: math.Round(transaction.Value*floatExchangeRate*100) / 100,

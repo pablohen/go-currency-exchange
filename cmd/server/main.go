@@ -51,7 +51,7 @@ func main() {
 	transactionRouter := chi.NewRouter()
 	transactionRouter.Get("/", transactionHandler.GetAllTransactionsPaginated)
 	transactionRouter.Post("/", transactionHandler.CreateTransaction)
-	transactionRouter.Get("/{id}", transactionHandler.GetTransactionById)
+	transactionRouter.Get("/{id}", transactionHandler.GetTransactionByIdWithExchangeRate)
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
