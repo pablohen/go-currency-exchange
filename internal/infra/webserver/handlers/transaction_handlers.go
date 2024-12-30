@@ -45,7 +45,6 @@ func (h *TransactionHandler) CreateTransaction(w http.ResponseWriter, r *http.Re
 	}
 
 	transactionMessage := dto.TransactionMessage{
-		ID:          transaction.ID,
 		Description: transaction.Description,
 		Value:       transaction.Value,
 		CreatedAt:   transaction.CreatedAt.UTC().Format(time.RFC3339Nano),

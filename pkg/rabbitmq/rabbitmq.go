@@ -72,8 +72,7 @@ func Publish(ch *amqp.Channel, queue string, message string) error {
 		false,
 		false,
 		amqp.Publishing{
-			ContentType: "text/plain",
-			Body:        []byte(message),
+			Body: []byte(message),
 		},
 	)
 	if err != nil {

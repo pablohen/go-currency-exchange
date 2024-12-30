@@ -16,7 +16,6 @@ type TransactionOutput struct {
 }
 
 type TransactionMessage struct {
-	ID          string  `json:"id"`
 	Description string  `json:"description"`
 	Value       float64 `json:"value"`
 	CreatedAt   string  `json:"created_at"`
