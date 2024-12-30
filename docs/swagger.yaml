@@ -1,0 +1,155 @@
+definitions:
+  dto.CreateTransactionInput:
+    properties:
+      created_at:
+        type: string
+      description:
+        type: string
+      value:
+        type: number
+    type: object
+  dto.TransactionMessage:
+    properties:
+      created_at:
+        type: string
+      description:
+        type: string
+      value:
+        type: number
+    type: object
+  dto.TransactionOutput:
+    properties:
+      conversion_rate:
+        type: number
+      converted_value:
+        type: number
+      created_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      original_value:
+        type: number
+    type: object
+  dto.TransactionsPaginated:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/entity.Transaction'
+        type: array
+      page:
+        type: integer
+      pageSize:
+        type: integer
+      total:
+        type: integer
+    type: object
+  entity.Transaction:
+    properties:
+      description:
+        type: string
+      id:
+        type: string
+      value:
+        type: number
+    type: object
+info:
+  contact: {}
+  title: Go Currency Exchange API
+  version: "0.1"
+paths:
+  /transactions:
+    get:
+      description: Get a paginated list of transactions
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Page size
+        in: query
+        name: pageSize
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.TransactionsPaginated'
+        "400":
+          description: Bad request
+          schema:
+            type: string
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      summary: Get all transactions with pagination
+      tags:
+      - transactions
+    post:
+      consumes:
+      - application/json
+      description: Create a new transaction with the given details
+      parameters:
+      - description: Transaction input
+        in: body
+        name: transaction
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CreateTransactionInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.TransactionMessage'
+        "400":
+          description: Invalid request body
+          schema:
+            type: string
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      summary: Create a new transaction
+      tags:
+      - transactions
+  /transactions/{id}:
+    get:
+      description: Get a transaction by ID and convert its value using the exchange
+        rate at the time of creation
+      parameters:
+      - description: Transaction ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.TransactionOutput'
+        "400":
+          description: Bad request
+          schema:
+            type: string
+        "404":
+          description: Transaction not found
+          schema:
+            type: string
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      summary: Get a transaction by ID with exchange rate
+      tags:
+      - transactions
+swagger: "2.0"

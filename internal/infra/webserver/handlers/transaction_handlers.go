@@ -28,6 +28,17 @@ func NewTransactionHandler(db database.TransactionInterface, channel *amqp.Chann
 	}
 }
 
+// CreateTransaction godoc
+// @Summary Create a new transaction
+// @Description Create a new transaction with the given details
+// @Tags transactions
+// @Accept json
+// @Produce json
+// @Param transaction body dto.CreateTransactionInput true "Transaction input"
+// @Success 201 {object} dto.TransactionMessage
+// @Failure 400 {string} string "Invalid request body"
+// @Failure 500 {string} string "Internal server error"
+// @Router /transactions [post]
 func (h *TransactionHandler) CreateTransaction(w http.ResponseWriter, r *http.Request) {
 	var createTransactionInput dto.CreateTransactionInput
 	err := json.NewDecoder(r.Body).Decode(&createTransactionInput)
@@ -66,6 +77,17 @@ func (h *TransactionHandler) CreateTransaction(w http.ResponseWriter, r *http.Re
 	w.WriteHeader(http.StatusCreated)
 }
 
+// GetTransactionByIdWithExchangeRate godoc
+// @Summary Get a transaction by ID with exchange rate
+// @Description Get a transaction by ID and convert its value using the exchange rate at the time of creation
+// @Tags transactions
+// @Produce json
+// @Param id path string true "Transaction ID"
+// @Success 200 {object} dto.TransactionOutput
+// @Failure 400 {string} string "Bad request"
+// @Failure 404 {string} string "Transaction not found"
+// @Failure 500 {string} string "Internal server error"
+// @Router /transactions/{id} [get]
 func (h *TransactionHandler) GetTransactionByIdWithExchangeRate(w http.ResponseWriter, r *http.Request) {
 	transactionID := r.PathValue("id")
 	if transactionID == "" {
@@ -106,16 +128,17 @@ func (h *TransactionHandler) GetTransactionByIdWithExchangeRate(w http.ResponseW
 	json.NewEncoder(w).Encode(transactionOutput)
 }
 
-func (h *TransactionHandler) GetAllTransactions(w http.ResponseWriter, r *http.Request) {
-	transactions, err := h.TransactionRepository.GetAll()
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	json.NewEncoder(w).Encode(transactions)
-}
-
+// GetAllTransactionsPaginated godoc
+// @Summary Get all transactions with pagination
+// @Description Get a paginated list of transactions
+// @Tags transactions
+// @Produce json
+// @Param page query int false "Page number" default(1)
+// @Param pageSize query int false "Page size" default(10)
+// @Success 200 {object} dto.TransactionsPaginated
+// @Failure 400 {string} string "Bad request"
+// @Failure 500 {string} string "Internal server error"
+// @Router /transactions [get]
 func (h *TransactionHandler) GetAllTransactionsPaginated(w http.ResponseWriter, r *http.Request) {
 	page := r.URL.Query().Get("page")
 	if page == "" {

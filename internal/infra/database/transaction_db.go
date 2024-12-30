@@ -1,6 +1,7 @@
 package database
 
 import (
+	"go-currency-exchange/internal/dto"
 	"go-currency-exchange/internal/entity"
 
 	"gorm.io/gorm"
@@ -50,20 +51,20 @@ func (t *TransactionRepository) GetAll() ([]entity.Transaction, error) {
 	return transactions, nil
 }
 
-func (t *TransactionRepository) GetAllPaginated(page int, pageSize int) (ItemsPaginated, error) {
+func (t *TransactionRepository) GetAllPaginated(page int, pageSize int) (dto.TransactionsPaginated, error) {
 	var transactions []entity.Transaction
 	err := t.DB.Offset((page - 1) * pageSize).Limit(pageSize).Find(&transactions).Error
 	if err != nil {
-		return ItemsPaginated{}, err
+		return dto.TransactionsPaginated{}, err
 	}
 
 	var total int64
 	err = t.DB.Model(&entity.Transaction{}).Count(&total).Error
 	if err != nil {
-		return ItemsPaginated{}, err
+		return dto.TransactionsPaginated{}, err
 	}
 
-	return ItemsPaginated{
+	return dto.TransactionsPaginated{
 		Items:    transactions,
 		Page:     page,
 		PageSize: pageSize,

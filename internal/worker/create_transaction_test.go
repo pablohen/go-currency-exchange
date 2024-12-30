@@ -7,7 +7,6 @@ import (
 
 	"go-currency-exchange/internal/dto"
 	"go-currency-exchange/internal/entity"
-	"go-currency-exchange/internal/infra/database"
 	"go-currency-exchange/internal/worker"
 
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -34,9 +33,9 @@ func (m *MockTransactionRepository) GetAll() ([]entity.Transaction, error) {
 	return args.Get(0).([]entity.Transaction), args.Error(1)
 }
 
-func (m *MockTransactionRepository) GetAllPaginated(page int, pageSize int) (database.ItemsPaginated, error) {
+func (m *MockTransactionRepository) GetAllPaginated(page int, pageSize int) (dto.TransactionsPaginated, error) {
 	args := m.Called(page, pageSize)
-	return args.Get(0).(database.ItemsPaginated), args.Error(1)
+	return args.Get(0).(dto.TransactionsPaginated), args.Error(1)
 }
 
 func TestCreateTransaction(t *testing.T) {

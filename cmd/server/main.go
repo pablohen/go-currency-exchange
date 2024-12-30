@@ -11,13 +11,18 @@ import (
 	"go-currency-exchange/internal/worker"
 	"go-currency-exchange/pkg/rabbitmq"
 
+	_ "go-currency-exchange/docs"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	amqp "github.com/rabbitmq/amqp091-go"
+	httpSwagger "github.com/swaggo/http-swagger/v2"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
+// @title Go Currency Exchange API
+// @version 0.1
 func main() {
 	log.SetFlags(log.LstdFlags | log.LUTC)
 	middleware.DefaultLogger = middleware.RequestLogger(&middleware.DefaultLogFormatter{Logger: log.New(log.Writer(), "", log.LstdFlags|log.LUTC)})
@@ -52,10 +57,12 @@ func main() {
 	transactionRouter.Get("/", transactionHandler.GetAllTransactionsPaginated)
 	transactionRouter.Post("/", transactionHandler.CreateTransaction)
 	transactionRouter.Get("/{id}", transactionHandler.GetTransactionByIdWithExchangeRate)
+
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 	r.Mount("/transactions", transactionRouter)
+	r.Get("/swagger/*", httpSwagger.Handler(httpSwagger.URL("http://localhost:"+config.WebServerPort+"/swagger/doc.json")))
 	go http.ListenAndServe(":"+config.WebServerPort, r)
 	log.Printf("Running at port: %s", config.WebServerPort)
 

@@ -1,5 +1,7 @@
 package dto
 
+import "go-currency-exchange/internal/entity"
+
 type CreateTransactionInput struct {
 	Description string  `json:"description"`
 	Value       float64 `json:"value"`
@@ -19,4 +21,18 @@ type TransactionMessage struct {
 	Description string  `json:"description"`
 	Value       float64 `json:"value"`
 	CreatedAt   string  `json:"created_at"`
+}
+
+type ItemsPaginated[T any] struct {
+	Items    []T `json:"items"`
+	Page     int `json:"page"`
+	PageSize int `json:"pageSize"`
+	Total    int `json:"total"`
+}
+
+type TransactionsPaginated struct {
+	Items    []entity.Transaction `json:"items"`
+	Page     int                  `json:"page"`
+	PageSize int                  `json:"pageSize"`
+	Total    int                  `json:"total"`
 }
