@@ -24,7 +24,6 @@ require (
 	github.com/mailru/easyjson v0.9.0 // indirect
 	github.com/swaggo/files/v2 v2.0.0 // indirect
 	golang.org/x/tools v0.28.0 // indirect
-	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
 
 require (
