@@ -1,14 +1,30 @@
 package rabbitmq
 
 import (
+	"log"
 	"net/url"
+	"time"
 
 	"go-currency-exchange/configs"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
-func OpenChannel() (*amqp.Channel, error) {
+func Connect() (*amqp.Channel, error) {
+	var rabbitmqChannel *amqp.Channel
+	var err error
+	for {
+		rabbitmqChannel, err = getChannel()
+		if err == nil {
+			break
+		}
+		log.Printf("Failed to connect to RabbitMQ, retrying in 2 seconds: %v", err)
+		time.Sleep(2 * time.Second)
+	}
+	return rabbitmqChannel, err
+}
+
+func getChannel() (*amqp.Channel, error) {
 	config, err := configs.LoadConfig(".")
 	if err != nil {
 		panic(err)
@@ -33,7 +49,7 @@ func OpenChannel() (*amqp.Channel, error) {
 	return ch, nil
 }
 
-func Consume(ch *amqp.Channel, queue string, consumer string, out chan amqp.Delivery) error {
+func Consume(ch *amqp.Channel, queue string, out chan amqp.Delivery) error {
 	_, err := ch.QueueDeclare(queue,
 		true,
 		false,
@@ -47,7 +63,7 @@ func Consume(ch *amqp.Channel, queue string, consumer string, out chan amqp.Deli
 
 	messages, err := ch.Consume(
 		queue,
-		consumer,
+		"",
 		false,
 		false,
 		false,

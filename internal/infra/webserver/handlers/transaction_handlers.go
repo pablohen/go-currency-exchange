@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"log"
 	"math"
 	"net/http"
 	"strconv"
@@ -69,9 +70,14 @@ func (h *TransactionHandler) CreateTransaction(w http.ResponseWriter, r *http.Re
 
 	err = rabbitmq.Publish(h.Channel, "transactions", string(transactionMessageJSON))
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(err.Error()))
-		return
+		log.Printf("Failed to publish message, reconnecting to RabbitMQ: %v", err)
+		h.Channel, _ = rabbitmq.Connect()
+		err = rabbitmq.Publish(h.Channel, "transactions", string(transactionMessageJSON))
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte(err.Error()))
+			return
+		}
 	}
 
 	w.WriteHeader(http.StatusCreated)

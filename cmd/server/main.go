@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"net/http"
+	"time"
 
 	"go-currency-exchange/configs"
 	"go-currency-exchange/internal/entity"
@@ -44,7 +45,7 @@ func main() {
 	}
 	log.Printf("Database migrated")
 
-	rabbitmqChannel, err := rabbitmq.OpenChannel()
+	rabbitmqChannel, err := rabbitmq.Connect()
 	if err != nil {
 		panic(err)
 	}
@@ -67,6 +68,17 @@ func main() {
 	log.Printf("Running at port: %s", config.WebServerPort)
 
 	transactionMessagesChannel := make(chan amqp.Delivery)
-	go rabbitmq.Consume(rabbitmqChannel, "transactions", "", transactionMessagesChannel)
+	go consumeWithReconnect(rabbitmqChannel, "transactions", transactionMessagesChannel)
 	worker.CreateTransaction(transactionMessagesChannel, transactionRepository)
+}
+
+func consumeWithReconnect(channel *amqp.Channel, queueName string, messages chan amqp.Delivery) {
+	for {
+		err := rabbitmq.Consume(channel, queueName, messages)
+		if err != nil {
+			log.Printf("Failed to consume messages, reconnecting: %v", err)
+			channel, _ = rabbitmq.Connect()
+		}
+		time.Sleep(2 * time.Second)
+	}
 }
