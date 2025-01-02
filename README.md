@@ -61,3 +61,17 @@ go install github.com/swaggo/swag
 ```
 swag init -g cmd/server/main.go
 ```
+
+3. Access the documentation at `http://localhost:8080/swagger/index.html`.
+
+### Running the tests
+
+```
+go test ./...
+```
+
+### Building the application
+
+```
+instructions on Makefile
+```
