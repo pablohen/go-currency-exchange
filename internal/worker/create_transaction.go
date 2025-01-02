@@ -17,14 +17,14 @@ func CreateTransaction(messageChan chan amqp.Delivery, transactionRepository dat
 		var transactionMessage dto.TransactionMessage
 		err := json.Unmarshal(message.Body, &transactionMessage)
 		if err != nil {
-			// TODO: log and push to error queue
-			panic(err)
+			// TODO: push to error queue
+			log.Printf("Error unmarshalling message: %s", message.Body)
 		}
 
 		err = transactionRepository.Create(transactionMessage.Description, transactionMessage.Value, transactionMessage.CreatedAt)
 		if err != nil {
-			// TODO: log and push to error queue
-			panic(err)
+			// TODO: push to error queue
+			log.Printf("Error creating transaction: %s", message.Body)
 		}
 		message.Ack(false)
 	}
