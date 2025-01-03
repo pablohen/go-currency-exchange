@@ -70,8 +70,11 @@ swag init -g cmd/server/main.go
 go test ./...
 ```
 
-### Building the application
+## Makefile
 
-```
-instructions on Makefile
-```
+We have a `Makefile` with some useful commands:
+
+- `make dev`: Run the server with hot reload.
+- `make docs`: Generates swagger documentation.
+- `make test`: Run the tests.
+- `make build`: Build the application.

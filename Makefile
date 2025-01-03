@@ -23,4 +23,10 @@ run: build
 deps:
 	$(GOGET) -u ./...
 
-.PHONY: all build clean test run deps
+dev:
+	air
+
+docs:
+	swag init -g cmd/server/main.go
+
+.PHONY: all build clean test run deps dev docs
