@@ -16,6 +16,8 @@ type conf struct {
 	RabbitMQPort     string `mapstructure:"RABBITMQ_PORT"`
 	RabbitMQUser     string `mapstructure:"RABBITMQ_USER"`
 	RabbitMQPassword string `mapstructure:"RABBITMQ_PASSWORD"`
+	OTELCollectorURL string `mapstructure:"OTEL_COLLECTOR_URL"`
+	PrometheusURL    string `mapstructure:"PROMETHEUS_URL"`
 }
 
 func LoadConfig(path string) (*conf, error) {
