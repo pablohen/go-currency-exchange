@@ -20,6 +20,13 @@ import (
 	httpSwagger "github.com/swaggo/http-swagger/v2"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
+	"go.opentelemetry.io/otel/sdk/resource"
+	"go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/trace"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 // @title Go Currency Exchange API
@@ -70,6 +77,10 @@ func main() {
 	transactionMessagesChannel := make(chan amqp.Delivery)
 	go consumeWithReconnect(rabbitmqChannel, "transactions", transactionMessagesChannel)
 	worker.CreateTransaction(transactionMessagesChannel, transactionRepository)
+
+	initTracer()
+	r.Handle("/metrics", promhttp.Handler())
+	r.Get("/health", healthCheckHandler)
 }
 
 func consumeWithReconnect(channel *amqp.Channel, queueName string, messages chan amqp.Delivery) {
@@ -81,4 +92,25 @@ func consumeWithReconnect(channel *amqp.Channel, queueName string, messages chan
 		}
 		time.Sleep(2 * time.Second)
 	}
+}
+
+func initTracer() {
+	exporter, err := stdouttrace.New(stdouttrace.WithPrettyPrint())
+	if err != nil {
+		log.Fatalf("failed to initialize stdouttrace exporter %v", err)
+	}
+
+	tp := trace.NewTracerProvider(
+		trace.WithBatcher(exporter),
+		trace.WithResource(resource.NewWithAttributes(
+			semconv.SchemaURL,
+			semconv.ServiceNameKey.String("go-currency-exchange"),
+		)),
+	)
+	otel.SetTracerProvider(tp)
+}
+
+func healthCheckHandler(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("OK"))
 }
